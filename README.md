@@ -55,7 +55,7 @@ The Equinox components within this repository are delivered as a series of multi
 
 ### Store libraries
 - [![MemoryStore NuGet](https://img.shields.io/nuget/v/Equinox.MemoryStore.svg)](https://www.nuget.org/packages/Equinox.MemoryStore/) `Equinox.MemoryStore`: In-memory store for integration testing/performance baselining/providing out-of-the-box zero dependency storage for examples.
-- [![EventStore NuGet](https://img.shields.io/nuget/v/Equinox.EventStore.svg)](https://www.nuget.org/packages/Equinox.EventStore/) `Equinox.EventStore` (depends on `EventStore.Client[Api.NetCore] >= 4`, `System.Runtime.Caching`, `FSharp.Control.AsyncSeq`): Production-strength [EventStore](https://eventstore.org/) Adapter instrumented to the degree necessitated by Jet's production monitoring requirements
+- [![EventStore NuGet](https://img.shields.io/nuget/v/Equinox.EventStore.svg)](https://www.nuget.org/packages/Equinox.EventStore/) `Equinox.EventStore` (depends on `EventStore.Client >= 5`, `System.Runtime.Caching`, `FSharp.Control.AsyncSeq`): Production-strength [EventStore](https://eventstore.org/) Adapter instrumented to the degree necessitated by Jet's production monitoring requirements
 - [![Cosmos NuGet](https://img.shields.io/nuget/v/Equinox.Cosmos.svg)](https://www.nuget.org/packages/Equinox.Cosmos/) `Equinox.Cosmos` (depends on `System.Runtime.Caching`, `FSharp.Control.AsyncSeq`,  `Microsoft.Azure.DocumentDb[.Core]`): Production-strength Azure CosmosDb Adapter with integrated 'unfolds' feature, facilitating optimal read performance in terms of latency and RU costs, instrumented to the degree necessitated by Jet's production monitoring requirements.
 
 ### `dotnet tool` provisioning / benchmarking tool
