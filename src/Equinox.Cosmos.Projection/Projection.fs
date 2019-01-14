@@ -411,13 +411,42 @@ open FSharp.Control
 open Microsoft.Azure.Documents
 open Microsoft.Azure.Documents.Client
 open Microsoft.Azure.Documents.Linq
+open Newtonsoft.Json
 open Newtonsoft.Json.Linq
+open Newtonsoft.Json.Converters
 open SaganChangefeedProcessor
 open System
 open System.IO
 open System.Linq
 open System.Text
 open System.Threading
+
+/// Some common Json functionality
+[<RequireQualifiedAccess>]
+module JsonUtil =
+
+  /// Wraps Json.NET exceptions in order to preserve existing clients' exception handling
+  type JsonException (msg:string) = inherit Exception (msg)
+
+  /// either result or an error string
+  type JsonResult<'a> = Choice<'a, string>
+
+  /// A serializer that can handle discriminated unions
+  let unionSerializer =
+    let serializer = JsonSerializer()
+    serializer.Converters.Add(DiscriminatedUnionConverter())
+    serializer
+
+  /// Parses a JSON string into a given type or raises an exception
+  // TODO(): replace this with LINQ style parsing
+  let fromString<'a> (str: string): 'a  =
+    try
+      JsonConvert.DeserializeObject<'a> str
+    with
+    | exn -> raise (JsonException (sprintf "JSON parse failed = %s" exn.Message))
+
+  let ToBytes (jobj: JToken): byte[] = Encoding.UTF8.GetBytes(jobj.ToString())
+
 
 module Map =
 
@@ -914,7 +943,10 @@ module ChangefeedProcessor =
     | ResumePrevious
     | StartFromBeginning
     | ResetToChangefeedPosition of ChangefeedPosition
-
+    with 
+        static member FromJsonString (json: string) : StartingPosition =
+            let jt = JToken.Parse json
+            jt.ToObject<StartingPosition>(JsonUtil.unionSerializer)
 
   /// Sets up a cosmos/equinox changefeed processor that calls the `handle` function when a new batch of event is received
   /// Handle takes in the latest changefeed position as well as the events read from changefeed
@@ -1239,3 +1271,4 @@ module Projector =
       let! progressWriter = ProgressWriter.create progressWriterConfig
       return! ChangefeedProcessor.run log config (handler log) progressWriter ProgressWriter.kafkaOffsetsMerge
     }
+
