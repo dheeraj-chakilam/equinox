@@ -29,6 +29,7 @@ type Tests(testOutputHelper) =
             partitionKeyPath = None
           } 
 
+        let startPositionStrategy = ChangefeedProcessor.StartingPosition.FromJsonString "{\"Case\":\"ResumePrevious\"}"
         let pub = {
             equinox = "equinox-test-ming"
             databaseEndpoint = Uri("<redacted>")
@@ -40,7 +41,7 @@ type Tests(testOutputHelper) =
             region = "eastus2"
             kafkaBroker = "<redacted>"
             clientId = "projector"
-            startPositionStrategy = ChangefeedProcessor.StartingPosition.ResumePrevious
+            startPositionStrategy = startPositionStrategy
             progressInterval = 30.0
         }
 
