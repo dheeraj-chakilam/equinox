@@ -293,17 +293,28 @@ type KafkaProducer private (log: ILogger, producer : Producer<string, string>, t
                 while inFlightBytes > minInFlightBytes do Thread.Sleep 5
                 log.Information "Consumer resuming polling"
 
+    let mutable isDisposed = false    
+    let cdeMap = new Dictionary<string, CountdownEvent>();
     type Consumer<'Key, 'Value> with
+        member c.ShutDown() = 
+            isDisposed <- true
+            cdeMap.[c.Name].Signal() |> ignore
+            cdeMap.[c.Name].Wait()
+
         member c.StoreOffset(tpo : TopicPartitionOffset) =
             c.StoreOffsets[| TopicPartitionOffset(tpo.Topic, tpo.Partition, Offset(let o = tpo.Offset in o.Value + 1L)) |]
             |> ignore
 
         member c.RunPoll(pollTimeout : TimeSpan, counter : InFlightMessageCounter) =
             let cts = new CancellationTokenSource()
+            cdeMap.Add(c.Name, new CountdownEvent(1))
             let poll() = 
                 while not cts.IsCancellationRequested do
-                    counter.AwaitThreshold()
-                    c.Poll(pollTimeout)
+                    counter.AwaitThreshold()       
+                    if not isDisposed then                        
+                        cdeMap.[c.Name].AddCount()
+                        c.Poll(pollTimeout)
+                        cdeMap.[c.Name].Signal() |> ignore
 
             let _ = Async.StartAsTask(async { poll() })
             { new IDisposable with member __.Dispose() = cts.Cancel() }
@@ -327,7 +338,7 @@ type KafkaProducer private (log: ILogger, producer : Producer<string, string>, t
             let d5 = c.OnPartitionEOF.Subscribe(fun tpo -> log.Verbose("consumer_partition_eof|topic={topic}|partition={partition}|offset={offset}", tpo.Topic, tpo.Partition, let o = tpo.Offset in o.Value))
             let d6 = c.OnOffsetsCommitted.Subscribe(fun cos -> for fmt in fmtTopicPartitionOffsetErrors cos.Offsets do log.Information("consumer_committed_offsets|{offsets}{oe}", fmt, fmtError cos.Error))
             { new IDisposable with member __.Dispose() = for d in [d1;d2;d3;d4;d5;d6] do d.Dispose() }
-
+            
     let mkConsumer (kvps, topics : string seq) keyDeserializer valueDeserializer =
         let consumer = new Consumer<'Key, 'Value>(kvps, keyDeserializer, valueDeserializer)
         let _ = consumer.OnPartitionsAssigned.Subscribe(fun m -> consumer.Assign m)
@@ -386,6 +397,9 @@ type KafkaProducer private (log: ILogger, producer : Producer<string, string>, t
         // await for handler faults or external cancellation
         do! Async.AwaitTaskCorrect tcs.Task
     }
+
+    let shutDownConsumer (consumer : Consumer<string, string>) =
+        consumer.ShutDown()
 
 [<NoComparison>]
 type KafkaConsumerConfig =
@@ -477,13 +491,13 @@ type KafkaConsumerConfig =
 type KafkaConsumer private (config : KafkaConsumerConfig, consumer : Consumer<string, string>, task : Task<unit>, cts : CancellationTokenSource) =
 
     /// https://github.com/edenhill/librdkafka/wiki/Statistics
-    [<CLIEvent>]
+    [<CLIEvent>]    
     member __.OnStatistics = consumer.OnStatistics
     member __.Config = config
     member __.Status = task.Status
     /// Asynchronously awaits until consumer stops or is faulted
     member __.AwaitConsumer() = Async.AwaitTaskCorrect task
-    member __.Stop() = cts.Cancel() ; task.Result
+    member __.Stop() = ConsumerImpl.shutDownConsumer(consumer); cts.Cancel(); task.Result; 
 
     interface IDisposable with member __.Dispose() = __.Stop()
 
