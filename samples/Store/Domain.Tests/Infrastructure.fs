@@ -5,6 +5,7 @@ open Domain
 open FsCheck
 open Swensen.Unquote
 open System
+open UnitsOfMeasure.Extra
 open global.Xunit
 
 type FsCheckGenerators =
@@ -30,7 +31,8 @@ module IdTypes =
     [<Fact>]
     let ``CartId has structural equality semantics`` () =
         let x = Guid.NewGuid()
-        test <@ CartId x = CartId x @>
+        let (x1 : CartId, x2 : CartId) = %x, %x
+        test <@ x1 = x2 @>
 
     [<Fact>]
     let ``ClientId has structural equality semantics`` () =

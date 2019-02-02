@@ -6,6 +6,7 @@ open Equinox.Store
 open Swensen.Unquote
 open System
 open System.Collections.Concurrent
+open UnitsOfMeasure.Extra
 
 module EquinoxEsInterop =
     open Equinox.EventStore
@@ -113,7 +114,7 @@ type Tests() =
         let gateway = createGesGateway conn batchSize
         let service = Backend.Cart.Service(log, CartIntegration.resolveGesStreamWithRollingSnapshots gateway)
         let itemCount = batchSize / 2 + 1
-        let cartId = Guid.NewGuid() |> CartId
+        let cartId = % Guid.NewGuid()
         do! act buffer service itemCount context cartId skuId "ReadStreamEventsBackwardAsync-Duration"
     }
 
@@ -126,6 +127,6 @@ type Tests() =
         let gateway = createEqxStore conn batchSize
         let service = Backend.Cart.Service(log, CartIntegration.resolveEqxStreamWithProjection gateway)
         let itemCount = batchSize / 2 + 1
-        let cartId = Guid.NewGuid() |> CartId
+        let cartId = % Guid.NewGuid()
         do! act buffer service itemCount context cartId skuId "EqxCosmos Tip " // one is a 404, one is a 200
     }
