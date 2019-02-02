@@ -93,6 +93,8 @@ let createStoreLog verbose verboseConsole maybeSeqEndpoint =
     c.CreateLogger() :> ILogger
 
 module LoadTest =
+    open UnitsOfMeasure.Extra
+
     let private runLoadTest log testsPerSecond duration errorCutoff reportingIntervals (clients : ClientId[]) runSingleTest =
         let mutable idx = -1L
         let selectClient () =
@@ -157,7 +159,7 @@ module LoadTest =
             | [] -> TimeSpan.FromSeconds 10.|> Seq.singleton
             | intervals -> seq { for i in intervals -> TimeSpan.FromSeconds(float i) }
             |> fun intervals -> [| yield duration; yield! intervals |]
-        let clients = Array.init (testsPerSecond * 2) (fun _ -> Guid.NewGuid () |> ClientId)
+        let clients = Array.init (testsPerSecond * 2) (fun _ -> % Guid.NewGuid())
 
         log.Information( "Running {test} for {duration} @ {tps} hits/s across {clients} clients; Max errors: {errorCutOff}, reporting intervals: {ri}, report file: {report}",
             test, duration, testsPerSecond, clients.Length, errorCutoff, reportingIntervals, reportFilename)
