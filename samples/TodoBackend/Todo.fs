@@ -56,7 +56,7 @@ type Handler(log, stream, ?maxAttempts) =
 type Service(handlerLog, resolve) =
     // The TodoBackend spec does not dictate having multiple lists, tentants or clients
     // Here, we implement such a discriminator in order to allow each virtual client to maintain independent state
-    let (|AggregateId|) (id : ClientId) = Equinox.AggregateId("Todos", ClientId.render id)
+    let (|AggregateId|) (id : ClientId) = Equinox.AggregateId("Todos", ClientId.toStringN id)
     let (|Stream|) (AggregateId id) = Handler(handlerLog, resolve id)
 
     member __.List(Stream stream) : Async<Todo seq> =
