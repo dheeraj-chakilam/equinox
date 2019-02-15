@@ -1,60 +1,18 @@
 Equinox is an event-sourcing engine consisting of an data store tailored to event streams and a projection system for distributing event streams.
 
-![](./Equinox Specification_files/macro)
-
 ## 1\. System Model
 
-The system consists of _state machines_ hosted by _microservices_ to perform _operations_ on _entities_. The execution of an operation entails the sequential execution of a state machine. Formally, a [state machine](https://en.wikipedia.org/wiki/Finite-state_transducer) is a tuple: 
+The system consists of _state machines_ hosted by _microservices_ to perform _operations_ on _entities_. The execution of an operation entails the sequential execution of a state machine. Formally, a [state machine](https://en.wikipedia.org/wiki/Finite-state_transducer) is a tuple:
 
-<table class="relative-table wrapped confluenceTable" style="width: 43.6782%;margin-left: 240.0px;"><colgroup><col style="width: 6.50264%;"><col style="width: 93.4974%;"></colgroup>
+|       |   |
+|-------|---|
+|       |   |
+| I     | A set of states  |
+| O     | A set of inputs  |
+| S_phi | An initial state  |
+| T     | A transition relation **`S × I → S × O`** taking pairs of states and inputs to _next_ state and output |
 
-<tbody>
-
-<tr>
-
-<th class="confluenceTh">**`S`**</th>
-
-<td class="confluenceTd">A set of states.</td>
-
-</tr>
-
-<tr>
-
-<th class="confluenceTh">**`I`**</th>
-
-<td class="confluenceTd">A set of inputs.</td>
-
-</tr>
-
-<tr>
-
-<th class="confluenceTh">**`O`**</th>
-
-<td class="confluenceTd">A set of outputs.</td>
-
-</tr>
-
-<tr>
-
-<th class="confluenceTh">**`s<sub><span style="color: rgb(34,34,34);">∅</span></sub>`**</th>
-
-<td class="confluenceTd">An initial state.</td>
-
-</tr>
-
-<tr>
-
-<th class="confluenceTh"><span style="color: rgb(34,34,34);">τ</span></th>
-
-<td class="confluenceTd">A transition relation **`S × I → S × O`** taking pairs of states and inputs to _next_ state and output.</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-An input **`i <span style="color: rgb(34,34,34);">∈ I</span>`** to a state machine represents a request to perform an action on an entity, identified in the input. A state **`s <span style="color: rgb(34,34,34);">∈</span> S`** corresponds to the state of the entity. Given a state `**s****<sub>n</sub>**` and an input **`i`** the transition function returns state **`s``<sub>n+1</sub>`** where the subscript corresponds to the _version_ of the state. The state machine does not specify how state, concurrency and communication are managed. Instead, these responsibilities are delegated to the hosting microservice. A microservice feeds the input and state to the state machine, and then interprets the resulting state and output. The input to a state machine is derived from messages received by the service performing the operation. The output of a state machine is transformed and possibly enriched to form a response message. The microservice can run concurrent executions of a state machine. State can be managed in several ways. Equinox enables the event-sourcing paradigm for state management as defined below.
+An input **`i ∈ I`** to a state machine represents a request to perform an action on an entity, identified in the input. A state **`s <span style="color: rgb(34,34,34);">∈</span> S`** corresponds to the state of the entity. Given a state `**s****<sub>n</sub>**` and an input **`i`** the transition function returns state **`s``<sub>n+1</sub>`** where the subscript corresponds to the _version_ of the state. The state machine does not specify how state, concurrency and communication are managed. Instead, these responsibilities are delegated to the hosting microservice. A microservice feeds the input and state to the state machine, and then interprets the resulting state and output. The input to a state machine is derived from messages received by the service performing the operation. The output of a state machine is transformed and possibly enriched to form a response message. The microservice can run concurrent executions of a state machine. State can be managed in several ways. Equinox enables the event-sourcing paradigm for state management as defined below.
 
 ## 2\. Event Sourcing
 
