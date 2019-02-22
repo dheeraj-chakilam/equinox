@@ -4,19 +4,19 @@ Equinox is an event-sourcing engine consisting of an data store tailored to even
 
 The system consists of _state machines_ hosted by _microservices_ to perform _operations_ on _entities_. The execution of an operation entails the sequential execution of a state machine. Formally, a [state machine](https://en.wikipedia.org/wiki/Finite-state_transducer) is a tuple:
 
-|       |   |
-|-------|---|
-|       |   |
-| I     | A set of states  |
-| O     | A set of inputs  |
-| S_phi | An initial state  |
-| T     | A transition relation **`S × I → S × O`** taking pairs of states and inputs to _next_ state and output |
+| Symbol           | Description      |
+|------------------|------------------|
+|                  |                  |
+| I                | A set of states  |
+| O                | A set of inputs  |
+| S<sub>φ</sub>    | An initial state |
+| T                | A transition relation **S × I → S × O** taking pairs of states and inputs to _next_ state and output            |
 
-An input **`i ∈ I`** to a state machine represents a request to perform an action on an entity, identified in the input. A state **`s <span style="color: rgb(34,34,34);">∈</span> S`** corresponds to the state of the entity. Given a state `**s****<sub>n</sub>**` and an input **`i`** the transition function returns state **`s``<sub>n+1</sub>`** where the subscript corresponds to the _version_ of the state. The state machine does not specify how state, concurrency and communication are managed. Instead, these responsibilities are delegated to the hosting microservice. A microservice feeds the input and state to the state machine, and then interprets the resulting state and output. The input to a state machine is derived from messages received by the service performing the operation. The output of a state machine is transformed and possibly enriched to form a response message. The microservice can run concurrent executions of a state machine. State can be managed in several ways. Equinox enables the event-sourcing paradigm for state management as defined below.
+An input *i ∈ I** to a state machine represents a request to perform an action on an entity, identified in the input. A state **s ∈  S** corresponds to the state of the entity. Given a state **s<sub>n</sub>** and an input **i** the transition function returns state **s<sub>n+1</sub>** where the subscript corresponds to the _version_ of the state. The state machine does not specify how state, concurrency and communication are managed. Instead, these responsibilities are delegated to the hosting microservice. A microservice feeds the input and state to the state machine, and then interprets the resulting state and output. The input to a state machine is derived from messages received by the service performing the operation. The output of a state machine is transformed and possibly enriched to form a response message. The microservice can run concurrent executions of a state machine. State can be managed in several ways. Equinox enables the event-sourcing paradigm for state management as defined below.
 
 ## 2\. Event Sourcing
 
-Event-sourcing is a state management paradigm, wherein rather than persisting the state itself, a history of the outputs of the state machine are persisted. Because state machine outputs play a critical role in event-sourcing and have additional semantics associated with them, they are more accurately referred to _events_. From the state machine transition function `**<span style="color: rgb(34,34,34);">τ</span>**` we can factor the following _delta_ function:
+Event-sourcing is a state management paradigm, wherein rather than persisting the state itself, a history of the outputs of the state machine are persisted. Because state machine outputs play a critical role in event-sourcing and have additional semantics associated with them, they are more accurately referred to _events_. From the state machine transition function **τ** we can factor the following _delta_ function:
 
 <table class="wrapped confluenceTable" style="margin-left: auto;margin-right: auto;"><colgroup><col></colgroup>
 
@@ -24,7 +24,7 @@ Event-sourcing is a state management paradigm, wherein rather than persisting th
 
 <tr>
 
-<th class="confluenceTh">**`<span style="color: rgb(34,34,34);">Δ</span> : S **<span>×</span>** E → S`**</th>
+<th class="confluenceTh">Δ : S × E → S</th>
 
 </tr>
 
@@ -32,7 +32,7 @@ Event-sourcing is a state management paradigm, wherein rather than persisting th
 
 </table>
 
-which given a state and an event, returns the next state. This function can be used to reconstitute state based on using a [fold](https://en.wikipedia.org/wiki/Fold_(higher-order_function)) **`fold <span style="color: rgb(34,34,34);">Δ</span> **`s<sub><span style="color: rgb(34,34,34);">∅</span></sub>`**`**. The sequence number of the resulting state instance corresponds to the sequence number of the last event used to derive it. When performing an operation, the history of past events of the state machine is retrieved and folded to recover the most recent state.  It is important that this function is deterministic so that we always fold to the same state. 
+which given a state and an event, returns the next state. This function can be used to reconstitute state based on using a [fold](https://en.wikipedia.org/wiki/Fold_(higher-order_function)): **fold Δ s<sub>∅</sub>**. The sequence number of the resulting state instance corresponds to the sequence number of the last event used to derive it. When performing an operation, the history of past events of the state machine is retrieved and folded to recover the most recent state.  It is important that this function is deterministic so that we always fold to the same state. 
 
 Managing state in this way offers several advantages:
 
@@ -66,7 +66,7 @@ The ordering and concurrency guarantees provided by streams make them an ideal c
 
 ### Example
 
-A state machine can model a stateful application such as a shopping cart, where states correspond to states of the shopping carts, inputs are requests to update the shopping cart, outputs are events indicating that a request has been performed, the initial state is an empty cart, and the transition relation embodies the business logic defining how requests to update a cart apply to carts in a particular state. An event for a shopping cart might be **`ItemAdded`**, and the input / command leading to it might be **`AddItem`**.
+A state machine can model a stateful application such as a shopping cart, where states correspond to states of the shopping carts, inputs are requests to update the shopping cart, outputs are events indicating that a request has been performed, the initial state is an empty cart, and the transition relation embodies the business logic defining how requests to update a cart apply to carts in a particular state. An event for a shopping cart might be **ItemAdded**, and the input / command leading to it might be **AddItem**.
 
 ## 3\. Equinox API
 
@@ -76,189 +76,30 @@ See also: [F# API](https://jet-tfs.visualstudio.com/Jet/Marvel/_git/marvel?path=
 
 ### Types
 
-<table class="wrapped confluenceTable"><colgroup><col style="width: 89.0px;"><col style="width: 1239.0px;"></colgroup>
+Indicates that the expected version specified in the add operation didn't match the version of the stream at the time of application. No events written in this case.
 
-<tbody>
-
-<tr>
-
-<th class="confluenceTh">Type</th>
-
-<th class="confluenceTh">Definition</th>
-
-</tr>
-
-<tr>
-
-<td class="confluenceTd">**`Conn`**</td>
-
-<td class="confluenceTd">Represents a client connection to the data store. The connection may store session metadata, and other configuration information. One connection object should be created per application instance.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`StreamId`**</td>
-
-<td colspan="1" class="confluenceTd">A unique identifier of a stream in a collection.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`SN`**</td>
-
-<td colspan="1" class="confluenceTd">A natural number corresponding to the sequence number of an event in a stream. The events in a stream form a proper [sequence](https://en.wikipedia.org/wiki/Sequence), such that a stream defines a partial function from integers to events.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`LSN`**</td>
-
-<td colspan="1" class="confluenceTd">A sequence number of the event within a partition of a collection.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`AsyncSeq`**</td>
-
-<td colspan="1" class="confluenceTd">An (asynchronous) sequence.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`EquinoxEvent`**</td>
-
-<td colspan="1" class="confluenceTd">Represents an individual event.</td>
-
-</tr>
-
-<tr>
-
-<td class="highlight-red confluenceTd" colspan="1" data-highlight-colour="red">**`AppendError.InvalidExpectedSequenceNumber`**</td>
-
-<td colspan="1" class="confluenceTd">Indicates that the expected version specified in the add operation didn't match the version of the stream at the time of application. No events written in this case.</td>
-
-</tr>
-
-</tbody>
-
-</table>
+| Type                                      | Definition                                                                                                                                                                                                                                     |
+|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Conn                                      | Represents a client connection to the data store. The connection may store session metadata, and other configuration information. One connection object should be created per application instance.                                            |
+| StreamId                                  | A unique identifier of a stream in a collection.                                                                                                                                                                                               |
+| SN                                        | A natural number corresponding to the sequence number of an event in a stream. The events in a stream form a proper [sequence](https://en.wikipedia.org/wiki/Sequence), such that a stream defines a partial function from integers to events. |
+| LSN                                       | A sequence number of the event within a partition of a collection.                                                                                                                                                                             |
+| AsyncSeq                                  | An (asynchronous) sequence.                                                                                                                                                                                                                    |
+| EquinoxEvent                              | Represents an individual event.                                                                                                                                                                                                                |
+| AppendError.InvalidExpectedSequenceNumber | Indicates that the expected version specified in the add operation didn't match the version of the stream at the time of application. No events written in this case.                                                                          |
 
 ### Event
 
-<table class="wrapped relative-table confluenceTable" style="width: 95.6358%;"><colgroup><col style="width: 7.00787%;"><col style="width: 92.9921%;"></colgroup>
+A payload of the event, either a JSON byte array, or a binary array to be base64 encoded.
 
-<tbody>
-
-<tr>
-
-<th class="confluenceTh">
-
-Field
-
-</th>
-
-<th class="confluenceTh">Definition</th>
-
-</tr>
-
-<tr>
-
-<td class="confluenceTd">
-
-**`StreamId`**
-
-</td>
-
-<td class="confluenceTd">The id of the stream to which the event belongs.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`SN`**</td>
-
-<td colspan="1" class="confluenceTd">The sequence number of the event in the stream.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`LSN`**</td>
-
-<td colspan="1" class="confluenceTd">The LSN of the event.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`Timestamp`**</td>
-
-<td colspan="1" class="confluenceTd">The time at which the event was generated.</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`Payload`**</td>
-
-<td colspan="1" class="confluenceTd">A payload of the event, either a JSON byte array, or a binary array to be base64 encoded.</td>
-
-</tr>
-
-</tbody>
-
-</table>
 
 ### Operations
 
-<table class="relative-table wrapped confluenceTable" style="width: 100.0%;"><colgroup><col style="width: 47.8327%;"><col style="width: 52.1673%;"></colgroup>
-
-<tbody>
-
-<tr>
-
-<th colspan="1" class="confluenceTh">Operation</th>
-
-<th colspan="1" class="confluenceTh">Definition</th>
-
-</tr>
-
-<tr>
-
-<td class="confluenceTd">**`get : Conn → StreamId → SN → AsyncSeq<Event[]>`**</td>
-
-<td class="confluenceTd">
-
-Given a connection, stream identifier and a sequence number, returns a sequence of events starting at the sequence number.
-
-</td>
-
-</tr>
-
-<tr>
-
-<td colspan="1" class="confluenceTd">**`getBack : Conn → StreamId → SN → AsyncSeq<Event[]>`**</td>
-
-<td colspan="1" class="confluenceTd">Given a connection, stream identifier and a sequence number, returns an async sequence of events in the stream backwards starting from the specified sequence number</td>
-
-</tr>
-
-<tr>
-
-<td class="confluenceTd">**`add : Conn → StreamId → SN → Event[] → Async<Result<SN, AppendError>>`**</td>
-
-<td class="confluenceTd">Given a connection, stream identifier, expected sequence number (expected version) and a set of events, adds the events to the stream. If the specified expected version number doesn't match the stream, an error is returned and the events are not added to the stream.</td>
-
-</tr>
-
-</tbody>
-
-</table>
+| Operation                                      | Definition                                                                                                                                                                                                                                                                 |
+|------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| get : Conn → StreamId → SN → AsyncSeq          | Given a connection, stream identifier and a sequence number, returns a sequence of events starting at the sequence number.                                                                                                                                                 |
+| getBack : Conn → StreamId → SN → AsyncSeq      | Given a connection, stream identifier and a sequence number, returns an async sequence of events in the stream backwards starting from the specified sequence number                                                                                                       |
+| add : Conn → StreamId → SN → Event[] → Async > | Given a connection, stream identifier, expected sequence number (expected version) and a set of events, adds the events to the stream. If the specified expected version number doesn't match the stream, an error is returned and the events are not added to the stream. |
 
 See the [F# API](https://jet-tfs.visualstudio.com/Jet/Marvel/_git/marvel?path=%2Fsrc%2Fmarvel-equinox%2FMarvel.Equinox%2FEquinox.fsi&version=GBxray_clean&fullScreen=true&_a=contents) for additional operations.
 
@@ -356,7 +197,7 @@ See [CosmosDB geo-replication](https://docs.microsoft.com/en-us/azure/cosmos-db/
 
 ## 8\. Snapshotting
 
-Snapshotting is a state caching mechanism used to reduce the number of events that need to be read from a stream to perform an operation and can be generated using the _delta_ function <span style="color: rgb(34,34,34);">Δ</span><span style="color: rgb(34,34,34);"> defined above. When performing an operation on an aggregate, the latest snapshot `**s<span style="font-size: 11.6667px;"><sub>latest</sub></span>**` is read. Then then events since sequence number `**n**` of the latest snapshot can read from the event store, or the operation can be attempted speculatively with the expected version `**n**`. Snapshots are broadly classified along three dimensions: generator, storage and interval. The generator can be the client itself, or it can be done using a projection. Snapshots can be stored in the same event store as the events themselves, or an entirely different data store. Finally, snapshots can be generated for each event or on a fixed interval. </span>
+Snapshotting is a state caching mechanism used to reduce the number of events that need to be read from a stream to perform an operation and can be generated using the _delta_ function **Δ** defined above. When performing an operation on an aggregate, the latest snapshot **s<sub>latest</sub>** is read. Then then events since sequence number **n** of the latest snapshot can read from the event store, or the operation can be attempted speculatively with the expected version `**n**`. Snapshots are broadly classified along three dimensions: generator, storage and interval. The generator can be the client itself, or it can be done using a projection. Snapshots can be stored in the same event store as the events themselves, or an entirely different data store. Finally, snapshots can be generated for each event or on a fixed interval.
 
 * * *
 
@@ -386,7 +227,7 @@ A projection definition consists of the following items:
 
 <tr>
 
-<td class="confluenceTd"><span style="font-family: monospace;">**Source**</span></td>
+<td class="confluenceTd"><span style="font-family: monospace;">Source</span></td>
 
 <td class="confluenceTd">The upstream event store to project.</td>
 
@@ -394,7 +235,7 @@ A projection definition consists of the following items:
 
 <tr>
 
-<td class="confluenceTd">**`Name`**</td>
+<td class="confluenceTd">Name</td>
 
 <td class="confluenceTd">The name of the projection. This should be domain specific and provide an indication of the events contained.</td>
 
@@ -402,7 +243,7 @@ A projection definition consists of the following items:
 
 <tr>
 
-<td colspan="1" class="confluenceTd">**`Topic`**</td>
+<td colspan="1" class="confluenceTd">Topic</td>
 
 <td colspan="1" class="confluenceTd">The Kafka topic to project to.</td>
 
@@ -410,15 +251,15 @@ A projection definition consists of the following items:
 
 <tr>
 
-<td colspan="1" class="confluenceTd">**`Predicate`**</td>
+<td colspan="1" class="confluenceTd">Predicate</td>
 
 <td colspan="1" class="confluenceTd">
 
 Defines the subset of events from the log that are to be projected. Currently, this is restricted to the following:
 
-*   **`Category`**: based on a stream id prefix
-*   **`EventType`**: based on the event type 
-*   **`Union`**: a composite of the the predicates above.
+*   **Category**: based on a stream id prefix
+*   **EventType**: based on the event type 
+*   **Union**: a composite of the the predicates above.
 
 </td>
 
